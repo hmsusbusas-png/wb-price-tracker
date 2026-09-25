@@ -5,6 +5,7 @@ import argparse
 import sys
 
 import wb
+import report
 
 
 def _fmt(price: float) -> str:
@@ -23,6 +24,10 @@ def cmd_search(args) -> None:
         print(f"{i:>3}. {p.name[:52]:<52} {_fmt(p.price):>9} ₽  ★{p.rating:.1f} ({p.feedbacks})")
     print(f"\nВсего найдено: {len(products)} товаров")
 
+    if args.excel:
+        path = report.to_excel(products, args.excel)
+        print(f"Excel сохранён: {path.resolve()}")
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(
@@ -34,6 +39,8 @@ def main() -> None:
     p_search.add_argument("query", help="поисковый запрос")
     p_search.add_argument("--pages", type=int, default=1,
                           help="сколько страниц выдачи (по 100 товаров)")
+    p_search.add_argument("--excel", metavar="FILE.xlsx",
+                          help="сохранить результаты в Excel")
     p_search.set_defaults(func=cmd_search)
 
     args = parser.parse_args()
