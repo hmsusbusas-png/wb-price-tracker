@@ -78,6 +78,14 @@ def cmd_history(args) -> None:
             print(f"  {point['ts']}   {_fmt(point['price']):>9} ₽")
 
 
+def cmd_chart(args) -> None:
+    try:
+        path = report.price_chart(args.nm_id, args.out)
+    except ValueError as e:
+        sys.exit(f"Ошибка: {e}")
+    print(f"График сохранён: {path.resolve()}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="wb-price-tracker",
@@ -101,6 +109,11 @@ def main() -> None:
 
     sub.add_parser("history", help="история цен из history.json"
                    ).set_defaults(func=cmd_history)
+
+    p_chart = sub.add_parser("chart", help="график истории цены в PNG")
+    p_chart.add_argument("nm_id", type=int, help="артикул товара")
+    p_chart.add_argument("--out", default="price_chart.png", help="имя файла PNG")
+    p_chart.set_defaults(func=cmd_chart)
 
     args = parser.parse_args()
     args.func(args)
