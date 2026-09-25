@@ -6,10 +6,17 @@ import sys
 
 import wb
 import report
+from storage import add, append_price, get, last_price, tracked_ids
 
 
 def _fmt(price: float) -> str:
     return f"{price:,.0f}".replace(",", " ")
+
+
+def _arrow(prev: float, current: float) -> str:
+    diff = current - prev
+    mark = "↑" if diff > 0 else "↓"
+    return f"{mark} {_fmt(abs(diff))} ₽ ({diff / prev * 100:+.1f}%)"
 
 
 def cmd_search(args) -> None:
@@ -29,6 +36,48 @@ def cmd_search(args) -> None:
         print(f"Excel сохранён: {path.resolve()}")
 
 
+def cmd_track(args) -> None:
+    try:
+        product = wb.get_product(args.nm_id)
+    except wb.WbError as e:
+        sys.exit(f"Ошибка: {e}")
+    if add(product.nm_id, product.name, product.price):
+        print(f"Отслеживаю: {product.name[:60]} — {_fmt(product.price)} ₽")
+    else:
+        print(f"Товар {args.nm_id} уже отслеживается — используйте `check`")
+
+
+def cmd_check(args) -> None:
+    ids = tracked_ids()
+    if not ids:
+        sys.exit("Список пуст — добавьте товары через `track <артикул>`")
+    try:
+        products = wb.get_products(ids)
+    except wb.WbError as e:
+        sys.exit(f"Ошибка: {e}")
+    by_id = {p.nm_id: p for p in products}
+    for nm_id in ids:
+        product = by_id.get(nm_id)
+        if not product:
+            print(f"  {nm_id}: не найден на WB (товар удалён?)")
+            continue
+        prev = last_price(nm_id)
+        append_price(nm_id, product.price, product.name)
+        delta = "" if prev is None or prev == product.price else _arrow(prev, product.price)
+        print(f"  {product.name[:44]:<44} {_fmt(product.price):>9} ₽  {delta}")
+
+
+def cmd_history(args) -> None:
+    ids = tracked_ids()
+    if not ids:
+        sys.exit("Список пуст — добавьте товары через `track <артикул>`")
+    for nm_id in ids:
+        item = get(nm_id)
+        print(f"\n{item['name'][:60]} ({nm_id})")
+        for point in item["points"][-10:]:
+            print(f"  {point['ts']}   {_fmt(point['price']):>9} ₽")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="wb-price-tracker",
@@ -42,6 +91,16 @@ def main() -> None:
     p_search.add_argument("--excel", metavar="FILE.xlsx",
                           help="сохранить результаты в Excel")
     p_search.set_defaults(func=cmd_search)
+
+    p_track = sub.add_parser("track", help="добавить товар в отслеживание")
+    p_track.add_argument("nm_id", type=int, help="артикул товара")
+    p_track.set_defaults(func=cmd_track)
+
+    sub.add_parser("check", help="опросить отслеживаемые товары, показать дельту"
+                   ).set_defaults(func=cmd_check)
+
+    sub.add_parser("history", help="история цен из history.json"
+                   ).set_defaults(func=cmd_history)
 
     args = parser.parse_args()
     args.func(args)
