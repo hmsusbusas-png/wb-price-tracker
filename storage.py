@@ -13,8 +13,21 @@ def _load() -> dict:
         return {}
     try:
         return json.loads(HISTORY_FILE.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
-        # битый файл не должен хоронить всю историю — начинаем заново
+    except json.JSONDecodeError as e:
+        # битый файл не должен хоронить всю историю — сохраняем копию и предупреждаем
+        stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        backup = HISTORY_FILE.with_name(f"{HISTORY_FILE.stem}.broken-{stamp}{HISTORY_FILE.suffix}")
+        try:
+            HISTORY_FILE.replace(backup)
+            print(f"ВНИМАНИЕ: {HISTORY_FILE} повреждён ({e}).\n"
+                  f"  Копия сохранена как {backup.name}; история начинается заново.")
+        except OSError:
+            print(f"ВНИМАНИЕ: {HISTORY_FILE} повреждён ({e}), сохранить копию не удалось — "
+                  f"почините или удалите файл вручную.")
+        return {}
+    except OSError as e:
+        print(f"ВНИМАНИЕ: не удалось прочитать {HISTORY_FILE} ({e}) — "
+              f"работаем с пустой историей, файл не тронут.")
         return {}
 
 

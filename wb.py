@@ -63,7 +63,7 @@ def _prices(p: dict) -> tuple[float, float]:
 def _parse(p: dict) -> Product:
     price, base = _prices(p)
     return Product(
-        nm_id=int(p["id"]),
+        nm_id=int(p.get("id") or 0),
         name=p.get("name") or "Без названия",
         brand=(p.get("brand") or "").strip() or "Без бренда",
         price=price,
@@ -74,8 +74,12 @@ def _parse(p: dict) -> Product:
 
 
 def _products_of(data: dict) -> list[dict]:
+    """Достаёт список товаров; кривой ответ любого уровня превращается в пустой список."""
+    if not isinstance(data, dict):
+        return []
     payload = data.get("data") if isinstance(data.get("data"), dict) else data
-    return (payload or {}).get("products") or []
+    products = (payload or {}).get("products") or []
+    return [p for p in products if isinstance(p, dict)]
 
 
 def _get(url: str, params: dict, timeout: float) -> dict:
@@ -109,8 +113,12 @@ def search(query: str, pages: int = 1, timeout: float = 10.0) -> list[Product]:
         if not products:
             break
         for p in products:
-            if p["id"] not in seen:
-                seen.add(p["id"])
+            try:
+                pid = int(p.get("id"))
+            except (TypeError, ValueError):
+                continue  # карточка без валидного id — пропускаем, не роняя выдачу
+            if pid not in seen:
+                seen.add(pid)
                 found.append(_parse(p))
     return found
 
@@ -120,7 +128,13 @@ def get_products(nm_ids: list[int], timeout: float = 10.0) -> list[Product]:
     if not nm_ids:
         return []
     data = _get(CARD_URL, {**COMMON_PARAMS, "spp": 30, "nm": ",".join(map(str, nm_ids))}, timeout)
-    return [_parse(p) for p in _products_of(data)]
+    parsed: list[Product] = []
+    for p in _products_of(data):
+        try:
+            parsed.append(_parse(p))
+        except (KeyError, TypeError, ValueError):
+            continue  # кривая карточка не должна ронять весь запрос
+    return parsed
 
 
 def get_product(nm_id: int, timeout: float = 10.0) -> Product:

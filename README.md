@@ -18,16 +18,15 @@ pip install -r requirements.txt
 
 ## Usage
 
-Search the catalog:
+Search the catalog (output format shown schematically):
 
 ```console
-$ python cli.py search "капучинатор"
+$ python cli.py search "капучинатор" --pages 1
 
-  1. Капучинатор ручной для взбивания молока, венчик из н     3 290 ₽  ★4.8 (2431)
-  2. Автоматический капучинатор для кофе с подогревом, 4      5 490 ₽  ★4.6 (812)
-  3. Венчик для капучинатора, запасной, сталь                   990 ₽  ★4.9 (154)
+  1. <название товара>                3 290 ₽  ★4.8 (2431)
+  2. <название товара>                1 190 ₽  ★4.6 (812)
 
-Всего найдено: 3 товаров
+Всего найдено: 47 товаров
 ```
 
 Same results as a formatted spreadsheet:
@@ -43,35 +42,35 @@ Start tracking a product (article number from the product URL):
 
 ```console
 $ python cli.py track 211984736
-Отслеживаю: Капучинатор ручной для взбивания молока, венчик из нержавейк — 3 290 ₽
+Отслеживаю: <название товара> — 3 290 ₽
 ```
 
 Every `check` run polls all tracked products and shows the change since
-the previous price:
+the previous recorded price (no line for a product means no change since
+the last run):
 
 ```console
 $ python cli.py check
-  Капучинатор ручной для взбивания молока, вен     3 450 ₽  ↑ 160 ₽ (+4.9%)
-  Капучинатор ручной для взбивания молока, вен     3 100 ₽  ↓ 350 ₽ (-10.1%)
+  <название товара>     3 450 ₽  ↑ 160 ₽ (+4.9%)
 ```
 
-Prices accumulate in `history.json`, so wire `check` into a cron job /
-Task Scheduler and you get a price history for free. Plot it:
+A measurement is recorded in `history.json` only when the price actually
+changed (or on the very first check), so the history stays clean. Wire
+`check` into a cron job / Task Scheduler and you get a price history for
+free. Plot it:
 
 ```console
 $ python cli.py chart 211984736
 График сохранён: C:\work\wb-price-tracker\price_chart.png
 ```
 
-Full history in the console:
+Full history in the console (one line per recorded measurement):
 
 ```console
 $ python cli.py history
-
-Капучинатор ручной для взбивания молока, венчик из нержавейк (211984736)
-  2026-09-25 18:32       3 290 ₽
-  2026-09-25 18:32       3 450 ₽
-  2026-09-25 18:32       3 100 ₽
+<название товара> (211984736)
+  <дата время>       3 290 ₽
+  <дата время>       3 100 ₽
 ```
 
 ## Notes
@@ -110,10 +109,14 @@ pip install -r requirements.txt
 - `python cli.py chart 211984736` — график истории цены в PNG
 - `python cli.py history` — таблица истории в консоли
 
-Цены копятся в `history.json`: достаточно запускать `check` по расписанию
-(планировщик задач / cron), и история цен собирается сама. WB отдаёт цены
-в копейках — здесь они переводятся в рубли, поддержаны и новый формат ответа
-(`sizes[].price`), и старый (`salePriceU`). Ошибки (таймаут, нет сети, товар
-удалён) выводятся коротким сообщением вместо traceback.
+Цены копятся в `history.json`: замер записывается только когда цена
+реально изменилась (или при первом `check`), поэтому история остаётся
+чистой. Достаточно запускать `check` по расписанию (планировщик задач /
+cron), и история цен собирается сама. WB отдаёт цены в копейках — здесь
+они переводятся в рубли, поддержаны и новый формат ответа
+(`sizes[].price`), и старый (`salePriceU`). Ошибки (таймаут, нет сети,
+товар удалён) выводятся коротким сообщением вместо traceback; если
+`history.json` повреждён, перед началом новой истории сохраняется копия
+`history.broken-<дата>.json`.
 
 Связь: Telegram [@lev_backend](https://t.me/lev_backend)
