@@ -1,24 +1,36 @@
 # wb-price-tracker
 
-Command-line tool for Wildberries: search the catalog for products with prices,
-export results to Excel, and track how the price of a specific product changes
-over time.
+CLI-инструмент для Wildberries: ищет товары по каталогу с ценами и рейтингом, выгружает результаты в Excel и следит, как меняется цена конкретного товара со временем. Пригодится продавцам, которые мониторят конкуренты, и всем, кто ждёт снижения цены на конкретную вещь.
 
-Built on WB's public (unofficial) search and card endpoints — no API key
-needed. Useful for sellers watching competitors and for anyone waiting for
-a price drop.
+Работает через публичные (неофициальные) эндпоинты поиска и карточек — ключ API не нужен.
 
-## Install
+## Возможности
 
-Python 3.10+ (tested on 3.14):
+- поиск по каталогу с пагинацией: `--pages N` забирает N страниц выдачи по 100 товаров
+- выгрузка результатов поиска в Excel одной опцией `--excel файл.xlsx`
+- отслеживание товаров по артикулу: `track` добавляет позицию, `check` опрашивает все добавленные
+- дельта цены между запусками check: стрелка ↑/↓ в рублях и процентах; если цена не менялась, строка не выводится
+- график истории цены в PNG (`chart`) и полная история в консоли (`history`)
+- в `history.json` замер записывается только когда цена реально изменилась (или при первом check) — история не засоряется
+- цены приходят в копейках и переводятся в рубли; поддержаны и новый формат ответа (`sizes[].price`), и старый (`salePriceU`)
+- ошибки (таймаут, нет сети, товар удалён) печатаются коротким сообщением вместо traceback
+
+## Быстрый старт
+
+Нужен Python 3.10+ (проверено на 3.14).
+
+1. Склонируйте репозиторий и перейдите в его папку.
+2. Установите зависимости:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-## Usage
+3. Всё, можно пользоваться — ни токенов, ни ключей не нужно.
 
-Search the catalog (output format shown schematically):
+## Как пользоваться
+
+Поиск по каталогу (вывод показан схематично):
 
 ```console
 $ python cli.py search "капучинатор" --pages 1
@@ -29,42 +41,35 @@ $ python cli.py search "капучинатор" --pages 1
 Всего найдено: 47 товаров
 ```
 
-Same results as a formatted spreadsheet:
+Те же результаты в виде таблицы Excel:
 
 ```console
 $ python cli.py search "капучинатор" --excel wb_prices.xlsx
 Excel сохранён: C:\work\wb-price-tracker\wb_prices.xlsx
 ```
 
-`--pages N` pulls N pages of results (100 items each).
-
-Start tracking a product (article number from the product URL):
+Начать следить за товаром (артикул — число из ссылки на карточку):
 
 ```console
 $ python cli.py track 211984736
 Отслеживаю: <название товара> — 3 290 ₽
 ```
 
-Every `check` run polls all tracked products and shows the change since
-the previous recorded price (no line for a product means no change since
-the last run):
+Каждый запуск `check` опрашивает все отслеживаемые товары и показывает изменение с прошлой записанной цены (нет строки — цена не менялась):
 
 ```console
 $ python cli.py check
   <название товара>     3 450 ₽  ↑ 160 ₽ (+4.9%)
 ```
 
-A measurement is recorded in `history.json` only when the price actually
-changed (or on the very first check), so the history stays clean. Wire
-`check` into a cron job / Task Scheduler and you get a price history for
-free. Plot it:
+Повесьте `check` на планировщик задач или cron — история цен собирается сама. Построить график:
 
 ```console
 $ python cli.py chart 211984736
 График сохранён: C:\work\wb-price-tracker\price_chart.png
 ```
 
-Full history in the console (one line per recorded measurement):
+Вся история в консоли (одна строка на замер):
 
 ```console
 $ python cli.py history
@@ -73,50 +78,34 @@ $ python cli.py history
   <дата время>       3 100 ₽
 ```
 
-## Notes
+## Честно об ограничениях
 
-- WB returns prices in kopecks; the tool converts to rubles. Both the current
-  response format (`sizes[].price`) and the legacy one (`salePriceU`) are handled.
-- The API is public but unofficial: WB may change the schema or throttle
-  aggressive polling. Keep `check` runs reasonable (a few times a day is plenty).
-- Errors (timeout, no network, deleted product) print a short message instead
-  of a traceback.
+- API публичный, но неофициальный: WB может сменить схему ответа или начать резать агрессивный опрос — вплоть до блокировки IP с 403. Держите `check` в разумных рамках, пары запусков в день достаточно.
+- если `history.json` повреждён, перед началом новой истории сохраняется копия `history.broken-<дата>.json`, так что старые данные не пропадают.
 
-## Contact
+## Структура
+
+```
+wb-price-tracker/
+├── cli.py            # команды: search, track, check, chart, history
+├── wb.py             # запросы к WB: поиск и карточки товаров
+├── storage.py        # история цен в history.json
+├── report.py         # экспорт: Excel-таблица и PNG-график
+├── requirements.txt
+├── history.json      # появляется после track/check
+└── price_chart.png   # результат chart
+```
+
+## Стек
+
+Python 3.10+, requests, pandas, openpyxl, matplotlib.
+
+## Связь
 
 Telegram: [@lev_backend](https://t.me/lev_backend)
 
 ---
 
-## RU
+## EN
 
-CLI-инструмент для Wildberries: поиск товаров по запросу с ценами, выгрузка
-результатов в Excel и отслеживание изменения цены конкретного товара.
-
-Работает через публичные (неофициальные) эндпоинты поиска и карточек — ключ
-API не нужен. Полезно продавцам для мониторинга конкурентов и всем, кто ждёт
-снижения цены на конкретный товар.
-
-```bash
-pip install -r requirements.txt
-```
-
-Основные команды:
-
-- `python cli.py search "запрос" --pages 2` — поиск, `--excel file.xlsx` — выгрузка в Excel
-- `python cli.py track 211984736` — добавить артикул в отслеживание
-- `python cli.py check` — опросить все товары, показать дельту (↑/↓ в рублях и процентах)
-- `python cli.py chart 211984736` — график истории цены в PNG
-- `python cli.py history` — таблица истории в консоли
-
-Цены копятся в `history.json`: замер записывается только когда цена
-реально изменилась (или при первом `check`), поэтому история остаётся
-чистой. Достаточно запускать `check` по расписанию (планировщик задач /
-cron), и история цен собирается сама. WB отдаёт цены в копейках — здесь
-они переводятся в рубли, поддержаны и новый формат ответа
-(`sizes[].price`), и старый (`salePriceU`). Ошибки (таймаут, нет сети,
-товар удалён) выводятся коротким сообщением вместо traceback; если
-`history.json` повреждён, перед началом новой истории сохраняется копия
-`history.broken-<дата>.json`.
-
-Связь: Telegram [@lev_backend](https://t.me/lev_backend)
+CLI tool for Wildberries: search the catalog with prices and ratings, export results to Excel, and track how a product's price changes over time. Runs on WB's public (unofficial) endpoints — no API key. Commands: `search` (+ `--excel`), `track`, `check`, `chart`, `history`. Python 3.10+, see the Russian section above for details.
