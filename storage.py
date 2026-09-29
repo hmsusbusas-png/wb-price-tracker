@@ -57,6 +57,8 @@ def last_price(nm_id: int) -> float | None:
 
 def add(nm_id: int, name: str, price: float) -> bool:
     """Добавляет товар. False — если уже отслеживается."""
+    if price <= 0:
+        return False
     data = _load()
     if str(nm_id) in data:
         return False
@@ -69,6 +71,8 @@ def add(nm_id: int, name: str, price: float) -> bool:
 
 
 def append_price(nm_id: int, price: float, name: str | None = None) -> None:
+    if price <= 0:
+        return
     data = _load()
     item = data.setdefault(str(nm_id), {"name": name or f"Товар {nm_id}", "points": []})
     if name:

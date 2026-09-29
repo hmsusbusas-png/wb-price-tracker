@@ -43,6 +43,8 @@ def cmd_track(args) -> None:
         product = wb.get_product(args.nm_id)
     except wb.WbError as e:
         sys.exit(f"Ошибка: {e}")
+    if product.price <= 0:
+        sys.exit("Ошибка: WB не вернул цену для этого товара, отслеживание не добавлено")
     if add(product.nm_id, product.name, product.price):
         print(f"Отслеживаю: {product.name[:60]} — {_fmt(product.price)} ₽")
     else:

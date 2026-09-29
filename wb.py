@@ -52,7 +52,11 @@ def _rub(kopecks) -> float:
 def _prices(p: dict) -> tuple[float, float]:
     # с 2024 цены переехали внутрь sizes[].price, старые выдачи отдают salePriceU
     for size in p.get("sizes") or []:
+        if not isinstance(size, dict):
+            continue
         price = size.get("price") or {}
+        if not isinstance(price, dict):
+            continue
         if price.get("product"):
             return _rub(price["product"]), _rub(price.get("basic") or price["product"])
     if p.get("salePriceU"):
@@ -62,8 +66,11 @@ def _prices(p: dict) -> tuple[float, float]:
 
 def _parse(p: dict) -> Product:
     price, base = _prices(p)
+    nm_id = int(p.get("id") or 0)
+    if nm_id <= 0:
+        raise ValueError("карточка без корректного id")
     return Product(
-        nm_id=int(p.get("id") or 0),
+        nm_id=nm_id,
         name=p.get("name") or "Без названия",
         brand=(p.get("brand") or "").strip() or "Без бренда",
         price=price,
@@ -118,8 +125,12 @@ def search(query: str, pages: int = 1, timeout: float = 10.0) -> list[Product]:
             except (TypeError, ValueError):
                 continue  # карточка без валидного id — пропускаем, не роняя выдачу
             if pid not in seen:
+                try:
+                    product = _parse(p)
+                except (TypeError, ValueError):
+                    continue
                 seen.add(pid)
-                found.append(_parse(p))
+                found.append(product)
     return found
 
 
