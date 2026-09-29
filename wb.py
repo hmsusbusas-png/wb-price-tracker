@@ -25,8 +25,8 @@ class Product:
     nm_id: int
     name: str
     brand: str
-    price: float        # ₽, со скидкой
-    base_price: float   # ₽, до скидки
+    price: float
+    base_price: float
     rating: float
     feedbacks: int
 
@@ -80,8 +80,7 @@ def _parse(p: dict) -> Product:
     )
 
 
-def _products_of(data: dict) -> list[dict]:
-    """Достаёт список товаров; кривой ответ любого уровня превращается в пустой список."""
+def _items(data: dict) -> list[dict]:
     if not isinstance(data, dict):
         return []
     payload = data.get("data") if isinstance(data.get("data"), dict) else data
@@ -116,14 +115,14 @@ def search(query: str, pages: int = 1, timeout: float = 10.0) -> list[Product]:
             "sort": "popular",
             "ab_testing": "false",
         }, timeout)
-        products = _products_of(data)
+        products = _items(data)
         if not products:
             break
         for p in products:
             try:
                 pid = int(p.get("id"))
             except (TypeError, ValueError):
-                continue  # карточка без валидного id — пропускаем, не роняя выдачу
+                continue
             if pid not in seen:
                 try:
                     product = _parse(p)
@@ -140,11 +139,11 @@ def get_products(nm_ids: list[int], timeout: float = 10.0) -> list[Product]:
         return []
     data = _get(CARD_URL, {**COMMON_PARAMS, "spp": 30, "nm": ",".join(map(str, nm_ids))}, timeout)
     parsed: list[Product] = []
-    for p in _products_of(data):
+    for p in _items(data):
         try:
             parsed.append(_parse(p))
         except (KeyError, TypeError, ValueError):
-            continue  # кривая карточка не должна ронять весь запрос
+            continue
     return parsed
 
 

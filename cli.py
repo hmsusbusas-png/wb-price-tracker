@@ -16,7 +16,7 @@ def _fmt(price: float) -> str:
 def _arrow(prev: float, current: float) -> str:
     diff = current - prev
     mark = "↑" if diff > 0 else "↓"
-    if prev == 0:  # процент от нуля не считается — показываем только рубли
+    if prev == 0:
         return f"{mark} {_fmt(abs(diff))} ₽"
     return f"{mark} {_fmt(abs(diff))} ₽ ({diff / prev * 100:+.1f}%)"
 
@@ -67,7 +67,6 @@ def cmd_check(args) -> None:
             continue
         prev = last_price(nm_id)
         if product.price <= 0:
-            # цена не распарсилась (0 ₽) — не пишем мусор в историю
             print(f"  {product.name[:44]:<44}      —  цена не получена, замер пропущен")
             continue
         if prev is None or prev != product.price:

@@ -14,7 +14,6 @@ def _load() -> dict:
     try:
         return json.loads(HISTORY_FILE.read_text(encoding="utf-8"))
     except json.JSONDecodeError as e:
-        # битый файл не должен хоронить всю историю — сохраняем копию и предупреждаем
         stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         backup = HISTORY_FILE.with_name(f"{HISTORY_FILE.stem}.broken-{stamp}{HISTORY_FILE.suffix}")
         try:

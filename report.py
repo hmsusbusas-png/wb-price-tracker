@@ -12,7 +12,7 @@ from openpyxl.styles import Alignment, Font, PatternFill
 import wb
 from storage import get
 
-_PURPLE = "7B2FF7"  # фирменный фиолетовый WB
+_PURPLE = "7B2FF7"
 
 
 def to_excel(products: list[wb.Product], path: str) -> Path:
